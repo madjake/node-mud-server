@@ -1,0 +1,29 @@
+{
+  "name": "node-mud-server",
+  "version": "0.0.1",
+  "description": "Node MUD Server is bare bones starting point for creating MUD game servers.",
+  "main": "server.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/madjake/node-mud-server.git"
+  },
+  "keywords": [
+    "mud",
+    "telnet",
+    "game",
+    "server"
+  ],
+  "author": "Jake Fournier",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/madjake/node-mud-server/issues"
+  },
+  "homepage": "https://github.com/madjake/node-mud-server#readme"
+}
