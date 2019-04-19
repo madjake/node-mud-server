@@ -14,7 +14,7 @@ Mud protocols the server will support:
 
 ### Prerequisites
 
-* [Node.js](https://nodejs.org/en/) Tested on v8.10.0 and above
+* [Node.js](https://nodejs.org/en/) Tested on v10.13.0 and above
 
 ### Installing
 

@@ -1,13 +1,7 @@
 class User {
   constructor(client) {
     this.client = client;
-    
-    this.client.willMCCP2();
-    this.client.willEcho();
-    this.client.willMXP();
-    this.setTimeout(0);
-    this.setKeepAlive(true, 10);
-  } 
+  }
 
   setKeepAlive(enable, seconds) {
     this.client.clientSocket.setKeepAlive(enable, 1000 * seconds);
@@ -34,7 +28,7 @@ class User {
 
     this.client.send(message);
   }
-  
+
   getClientIp() {
     return this.client.clientSocket.remoteAddress.replace(/^.*:/, '');
   }

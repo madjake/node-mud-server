@@ -1,58 +1,76 @@
 const net = require('net'),
       fs = require('fs'),
       TelnetStream = require('driver/TelnetStream'),
-      User = require('driver/User');
+      User = require('driver/User'),
+      ScriptManager = require('driver/ScriptManager');
 
 class GameServer {
   constructor(config, logger) {
     this.config = config;
     this.logger = logger;
-   
+
     this.users = new Set();
     this.Server = net.createServer(this.onUserConnect.bind(this));
+    this.ScriptManager = new ScriptManager(logger, this.config.libDirectory);
   }
 
-  /*
-   The goal here will be that the CommandHandler will be loaded by
-   a script manager which will be able to reload scripts on
-   demand so all game logic can be reloaded without a restart 
-   or hotboot.  For now it doesn't do anything like that.
+  /**
+   * Load the CommandHandler script through the ScriptManager so it
+   * can be dynamically reloaded during runtime
    */
   loadLib() {
-    let CommandHandler = require('lib/CommandHandler');
-    this.commandHandler = new CommandHandler(this); 
+    const CommandHandler = this.ScriptManager.getModule('CommandHandler');
+
+    if (!CommandHandler) {
+      this.logger.error('lib/CommandHandler.js is missing or did not load successfully.');
+      process.exit(1);
+    }
+
+    this.commandHandler = new CommandHandler(this);
   }
 
   start() {
     this.loadLib();
     this.loadSplashScreen();
     this.Server.listen(this.config.port);
-    this.logger.log(`Server started on port ${this.config.port}`);
+    this.logger.info(`Server started on port ${this.config.port}`);
   }
 
   onUserConnect(socket) {
     let client = new TelnetStream(socket);
     let user = new User(client);
 
-    this.users.add(user); 
+    this.users.add(user);
+
+    user.client.willMCCP2();
+    user.client.willMXP();
+    user.client.doEcho();
+    user.setTimeout(0);
+    user.setKeepAlive(true, 10);
 
     client.on('input', this.onInput.bind(this, user));
     client.on('socketError', this.onSocketError.bind(this, user));
     client.on('disconnect', this.onUserDisconnect.bind(this, user));
-    
+
     this.showSplashScreen(user);
-    this.logger.log(`User connected ${user.getClientIp()}`);
+    this.logger.info(`User connected ${user.getClientIp()}`);
   }
-    
+
   onInput(user, rawInput) {
-    this.commandHandler.handleInput(user, rawInput);
+    try {
+      this.commandHandler.handleInput(user, rawInput);
+    } catch (exception) {
+      user.send("There was a problem with that command. It has been logged. If it continues please contact an Admin.");
+      this.logger.error(exception);
+    }
   }
 
   getUsers() {
-    return [...this.users];     
+    return [...this.users];
   }
 
   onSocketError(socketError, user) {
+    this.logger.info(`${user.getClientIp()} errored:`, socketError);
     this.disconnectUser(user);
   }
 
@@ -60,9 +78,16 @@ class GameServer {
     this.disconnectUser(user);
   }
 
+  quitUser(user, message) {
+    if (user && message) {
+      user.send(message);
+    }
+
+    user.client.endConnection();
+  }
+
   disconnectUser(user) {
-    user.send('Goodbye.');
-    this.logger.log(`${user.getClientIp()} disconnected.`);
+    this.logger.info(`${user.getClientIp()} disconnected.`);
     this.users.delete(user);
   }
 
@@ -71,13 +96,17 @@ class GameServer {
   }
 
   loadSplashScreen(user) {
-    fs.readFile("config/splashscreen", (err, str) => { 
-      if (err) { 
+    fs.readFile("config/splashscreen", (err, str) => {
+      if (err) {
         throw err;
       }
-        
-      this.splashScreen = str.toString(); 
+
+      this.splashScreen = str.toString();
     });
+  }
+
+  getMemoryUsage() {
+    return process.memoryUsage();
   }
 }
 

@@ -33,18 +33,26 @@ module.exports = class TelnetStream extends DuplexStream {
       this.mccp2 = false;
       this.mxp = false;
 
-      this.on('error', this.handleSocketError.bind(this));
-      this.on('end', this.endConnection.bind(this));
-      this.on('close', this.endConnection.bind(this));
+      this.clientSocket.on('error', this.handleSocketError.bind(this));
+      this.clientSocket.on('close', this.closeConnection.bind(this));
     }
 
   handleSocketError(error) {
+    this.clientSocket.destroy();
     this.emit('socketError', error)
   };
 
   endConnection() {
+    this.clientSocket.destroy();
+  }
+
+  closeConnection() {
     this.emit('disconnect');
-  };
+  }
+
+  willMCCP() {
+    this.sendCommand(this.TelnetCommands.WILL, this.MUD_TELNET_OPTIONS.MCCP);
+  }
 
   willMCCP2() {
     this.sendCommand(this.TelnetCommands.WILL, this.MUD_TELNET_OPTIONS.MCCP2);
@@ -56,6 +64,10 @@ module.exports = class TelnetStream extends DuplexStream {
 
   dontEcho() {
     this.sendCommand(this.TelnetCommands.DONT, this.TelnetOptions.OPT_ECHO);
+  }
+
+  doMCCP() {
+    this.sendCommand(this.TelnetCommands.DO, this.MUD_TELNET_OPTIONS.MCCP);
   }
 
   doEcho() {
@@ -79,6 +91,10 @@ module.exports = class TelnetStream extends DuplexStream {
     this.mxp = false;
   }
 
+  _read() {
+
+  }
+
   _write(chunk, encoding, callback) {
     for (var i = 0; i < chunk.length; i++) {
       var byte = chunk[i];
@@ -99,6 +115,7 @@ module.exports = class TelnetStream extends DuplexStream {
           ) {
         this.bytes.splice(-1, 1);
         this.sendCurrentBuffer();
+
         this.reset();
       } else if (this.state == this.STATES.DATA
           && (byte == this.CONTROL_CODES.BS
@@ -136,7 +153,7 @@ module.exports = class TelnetStream extends DuplexStream {
 
   sendCurrentBuffer() {
     if (this.bytes.length) {
-      var buffer = new Buffer(this.bytes);
+      var buffer = Buffer.from(this.bytes);
       var line = buffer.toString().replace(/[^\x00-\x7F]/g, "");//strip out non ascii
       //.replace(/\W/g, '');
       this.emit('input', line);
@@ -329,7 +346,7 @@ module.exports = class TelnetStream extends DuplexStream {
     if (option == this.MUD_TELNET_OPTIONS.MSSP) {
       var msspData = {};
 
-      var buffer = new Buffer(data, 'ascii');
+      var buffer = Buffer.from(data, 'ascii');
       buffer = buffer.toString().split(String.fromCharCode(this.MSSP.VAR));
 
       for (var i = 0; i < buffer.length; i++) {
@@ -343,10 +360,6 @@ module.exports = class TelnetStream extends DuplexStream {
 
       this.emit('mssp', msspData)
     }
-  }
-
-  _read(size) {
-
   }
 
   pipe(destinationStream, options) {
@@ -367,7 +380,7 @@ module.exports = class TelnetStream extends DuplexStream {
 
   send(data) {
     if (!Buffer.isBuffer(data)) {
-      data = new Buffer(data);
+      data = Buffer.from(data);
     }
 
     if (this.zlib) {
