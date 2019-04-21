@@ -61,6 +61,14 @@ module.exports = class TelnetStream extends DuplexStream {
   willEcho() {
     this.sendCommand(this.TelnetCommands.WILL, this.TelnetOptions.OPT_ECHO);
   }
+  
+  wontMCCP2() {
+    this.sendCommand(this.TelnetCommands.WONT, this.TelnetOptions.OPT_ECHO);
+  }
+
+  dontMCCP2() {
+    this.sendCommand(this.TelnetCommands.DONT, this.TelnetOptions.OPT_ECHO);
+  }
 
   dontEcho() {
     this.sendCommand(this.TelnetCommands.DONT, this.TelnetOptions.OPT_ECHO);
@@ -303,13 +311,13 @@ module.exports = class TelnetStream extends DuplexStream {
     } else if (option == this.MUD_TELNET_OPTIONS.MCCP
         && !this.negotiatedOptions[this.MUD_TELNET_OPTIONS.MCCP]) {
       this.sendCommand(this.TelnetCommands.SB, [this.MUD_TELNET_OPTIONS.MCCP, this.TelnetCommands.IAC, this.TelnetCommands.SE]);
-      this.zlib = zlib.createDeflate({'level': 9});
+      this.zlib = zlib.createDeflate({'level': 9, flush: zlib.Z_SYNC_FLUSH});
       this.zlib.pipe(this.destinationStream);
       this.negotiatedOptions[this.MUD_TELNET_OPTIONS.MCCP] = this.MUD_TELNET_OPTIONS.MCCP;
     } else if (option == this.MUD_TELNET_OPTIONS.MCCP2
         && !this.negotiatedOptions[this.MUD_TELNET_OPTIONS.MCCP2]) { //MCCP2
       this.sendCommand(this.TelnetCommands.SB, [this.MUD_TELNET_OPTIONS.MCCP2, this.TelnetCommands.IAC, this.TelnetCommands.SE]);
-      this.zlib = zlib.createDeflate({'level': 9});
+      this.zlib = zlib.createDeflate({'level': 9, flush: zlib.Z_SYNC_FLUSH});
       this.zlib.pipe(this.destinationStream);
       this.negotiatedOptions[this.MUD_TELNET_OPTIONS.MCCP2] = this.MUD_TELNET_OPTIONS.MCCP2;
       this.mccp2 = true;
