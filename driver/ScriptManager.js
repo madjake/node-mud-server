@@ -1,5 +1,6 @@
 const fs = require('fs'),
       vm = require('vm'),
+      path = require('path'),
       Script = require('driver/Script');
 
 class ScriptManager {
@@ -7,49 +8,84 @@ class ScriptManager {
     this.logger = logger;
     this.libPath = libPath;
     this.scripts = {};
+    this.scriptDependencies = [];
+  }
 
-    this.loadScripts();
+  setScriptRuntimeDependencies(moduleNames) {
+    let modules = {};
+
+    if (moduleNames && !moduleNames.length) {
+      return false;
+    }
+
+    moduleNames.forEach( (moduleName) => {
+      const module = this.getModule(moduleName);
+      modules[module.name] = module;
+    });
+
+    this.scriptDependencies = modules;
+  }
+
+  getDefaultSandbox() {
+    return {
+      require: require,
+      ...this.scriptDependencies
+    };
   }
 
   runScript(scriptName, sandbox) {
     if (!this.scripts[scriptName]) {
+      this.loadScript(scriptName);
+    }
+    
+    if (!this.scripts[scriptName]) {
       return null;
     }
 
-    return this.scripts[scriptName].run(sandbox || {});
+    sandbox = {...this.getDefaultSandbox(), ...sandbox};
+    
+    return this.scripts[scriptName].run(sandbox);
   }
 
   getModule(scriptName, moduleName) {
-    const script = this.scripts[scriptName];
-
-    if (!script) {
+    if (!this.scripts[scriptName]) {
+      this.loadScript(scriptName);
+    }
+    
+    if (!this.scripts[scriptName]) {
       return null;
     }
 
-    return script.getExportedModule(moduleName);
+    return this.scripts[scriptName].getExportedModule(moduleName);
   }
-
-  loadScripts() {
-    const scriptFiles = this.getFilesInDirectoryTree(this.libPath);
-
-    scriptFiles.forEach( (filePath) => {
-      const script = this.loadScript(filePath);
-      this.scripts[script.name] = script;
-    })
-
-    this.logger.info(`Loaded ${Object.keys(this.scripts).length} scripts from ${this.libPath}/:\n\t${Object.keys(this.scripts).join('\n\t')}`);
-  }
-
-  reloadScript(scriptName) {
-    const oldScript = this.scripts[scriptName];
-
-    if (!oldScript) {
-      return false;
+ 
+  loadScript(scriptName) {
+    const filePath = `lib/${scriptName}.js`;
+    const rawScript = fs.readFileSync(filePath);
+    let scriptWrapper = '%script_content%';
+    
+    if (rawScript.indexOf("module.exports") !== -1) {
+      scriptWrapper = 'const module = {};\n%script_content%';
     }
 
-    const filePath = oldScript.file;
-    //this.uncacheModule(filePath);
-    const script = this.loadScript(filePath);
+    const wrappedScript = scriptWrapper.replace('%script_content%', rawScript);
+    
+    var vmScript = new vm.Script(wrappedScript, {
+      filename: filePath, // filename for stack traces
+      lineOffset: -(scriptWrapper.split('\n').length - 1), // line number offset to be used for stack traces
+      columnOffset: 1,
+      displayErrors: true,
+      timeout: 1000 // ms
+    });
+
+    this.scripts[scriptName] = new Script(filePath, scriptName, vmScript, wrappedScript, rawScript, this.getDefaultSandbox());
+    this.logger.info(`Loaded script: ${scriptName}`);
+
+    return this.scripts[scriptName];
+  }
+
+  reloadScript(scriptName) { 
+    const script = this.loadScript(scriptName);
 
     if (script) {
       delete this.scripts[scriptName];
@@ -59,37 +95,8 @@ class ScriptManager {
     return true;
   }
 
-  loadScript(filePath) {
-    const scriptName = filePath.replace(/^lib\//, '').replace(/\.js$/, '');
-    const rawScript = fs.readFileSync(filePath);
-    let scriptWrapper = '%script_content%';
-
-    if (rawScript.indexOf("module.exports") !== -1) {
-      scriptWrapper = 'const module = {};\n%script_content%';
-    }
-
-    const wrappedScript = scriptWrapper.replace('%script_content%', rawScript);
-
-    var vmScript = new vm.Script(wrappedScript, {
-      filename: filePath, // filename for stack traces
-      lineOffset: scriptWrapper.split('\n').length, // line number offset to be used for stack traces
-      columnOffset: 1,
-      displayErrors: true,
-      timeout: 1000 // ms
-    });
-
-    try {
-      const script = new Script(filePath, scriptName, vmScript, wrappedScript, rawScript);
-
-      return script;
-    } catch (exception) {
-      this.logger.error(`Failed loading ${filePath}`);
-      return null;
-    }
-  }
-
-  getFilesInDirectoryTree(dirPath) {
-    let files = fs.readdirSync(dirPath);
+  getFilesInDirectoryTree(dirPath, fileExtension) {
+    const files = fs.readdirSync(dirPath);
     let scriptFiles = [];
 
     files.forEach((fileName, idx) => {
@@ -101,8 +108,8 @@ class ScriptManager {
       }
 
       if (fileStat.isDirectory()) {
-        scriptFiles = [...scriptFiles, ...this.getFilesInDirectoryTree(filePath)];
-      } else {
+        scriptFiles = [...scriptFiles, ...this.getFilesInDirectoryTree(filePath, fileExtension)];
+      } else if (path.extname(filePath) === fileExtension) {
         scriptFiles.push(filePath);
       }
     });

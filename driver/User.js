@@ -3,7 +3,7 @@ class User {
     this.client = client;
   }
 
-  setKeepAlive(enable, seconds) {
+  setKeepAliveSeconds(enable, seconds) {
     this.client.clientSocket.setKeepAlive(enable, 1000 * seconds);
   }
 

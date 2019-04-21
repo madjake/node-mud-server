@@ -10,8 +10,8 @@ class GameServer {
     this.logger = logger;
 
     this.users = new Set();
-    this.Server = net.createServer(this.onUserConnect.bind(this));
-    this.ScriptManager = new ScriptManager(logger, this.config.libDirectory);
+    this.server = net.createServer(this.onUserConnect.bind(this));
+    this.scriptManager = new ScriptManager(logger, this.config.libDirectory);
   }
 
   /**
@@ -19,7 +19,7 @@ class GameServer {
    * can be dynamically reloaded during runtime
    */
   loadLib() {
-    const CommandHandler = this.ScriptManager.getModule('CommandHandler');
+    const CommandHandler = this.scriptManager.getModule('CommandHandler');
 
     if (!CommandHandler) {
       this.logger.error('lib/CommandHandler.js is missing or did not load successfully.');
@@ -31,8 +31,7 @@ class GameServer {
 
   start() {
     this.loadLib();
-    this.loadSplashScreen();
-    this.Server.listen(this.config.port);
+    this.server.listen(this.config.port);
     this.logger.info(`Server started on port ${this.config.port}`);
   }
 
@@ -42,17 +41,11 @@ class GameServer {
 
     this.users.add(user);
 
-    user.client.willMCCP2();
-    user.client.willMXP();
-    user.client.doEcho();
-    user.setTimeout(0);
-    user.setKeepAlive(true, 10);
-
     client.on('input', this.onInput.bind(this, user));
     client.on('socketError', this.onSocketError.bind(this, user));
     client.on('disconnect', this.onUserDisconnect.bind(this, user));
-
-    this.showSplashScreen(user);
+    
+    this.commandHandler.handleNewConnection(user);
     this.logger.info(`User connected ${user.getClientIp()}`);
   }
 
@@ -91,22 +84,12 @@ class GameServer {
     this.users.delete(user);
   }
 
-  showSplashScreen(user) {
-    user.send(this.splashScreen);
-  }
-
-  loadSplashScreen(user) {
-    fs.readFile("config/splashscreen", (err, str) => {
-      if (err) {
-        throw err;
-      }
-
-      this.splashScreen = str.toString();
-    });
-  }
-
   getMemoryUsage() {
     return process.memoryUsage();
+  }
+
+  forceGarbageCollection() {
+    global.gc(true);
   }
 }
 

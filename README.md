@@ -14,7 +14,9 @@ Mud protocols the server will support:
 
 ### Prerequisites
 
-* [Node.js](https://nodejs.org/en/) Tested on v10.13.0 and above
+* [Node.js](https://nodejs.org/en/) ... See .nvmrc for version
+
+Highly recommended to use [NVM](https://github.com/creationix/nvm) to manage node versions.
 
 ### Installing
 
@@ -25,37 +27,8 @@ No external depencies yet so no need to install anything.
 ### Run in foreground:
 
 ```
-> node server.js
-```
-
-or
-
-```
 > npm start
 ```
-
-### Run in background: 
-
-This isn't really ready for prime time but if you wanted to run this a great process manager for nodejs
-is [PM2](http://pm2.keymetrics.io/)
-
-Start :
-```
-> npm install pm2 -g
-> pm2 start server.js --name "mud"
-```
-
-Stop:
-```
-> pm2 stop mud
-```
-
-Restart:
-```
-> pm2 restart mud
-```
-
-For information about startup scripts (your server reboots) and how to configure PM2 to run on reboots see http://pm2.keymetrics.io/docs/usage/startup/
 
 ## Authors
 

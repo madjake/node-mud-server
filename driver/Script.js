@@ -1,6 +1,6 @@
 
 class Script {
-  constructor(file, name, vmScript, contents, rawScript) {
+  constructor(file, name, vmScript, contents, rawScript, sandbox) {
     this.file = file;
     this.name = name;
     this.vmScript = vmScript;
@@ -8,10 +8,10 @@ class Script {
     this.rawScript = rawScript;
     this.exports = {}
     this.isModule = false;
-
+    
     if (this.rawScript.indexOf("module.exports") !== -1) {
       this.isModule = true;
-      this.exports = this.vmScript.runInNewContext({});
+      this.exports = this.vmScript.runInNewContext(sandbox);
     }
   }
 

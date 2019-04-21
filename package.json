@@ -2,13 +2,9 @@
   "name": "node-mud-server",
   "version": "0.0.1",
   "description": "Node MUD Server is bare bones starting point for creating MUD game servers.",
-  "main": "server.js",
-  "directories": {
-    "lib": "lib"
-  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node --expose-gc server.js"
   },
   "repository": {
     "type": "git",
