@@ -1,0 +1,1 @@
+{"id":34844794,"name":"test","components":["Descriptive","Body"],"templates":["Player"],"Descriptive":{"name":"unnamed thing","description":"Give me a description."},"Body":{"health":100,"maxHealth":100,"stamina":100,"maxStamina":100,"race":"human"}}

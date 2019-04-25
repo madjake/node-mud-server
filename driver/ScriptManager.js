@@ -1,6 +1,7 @@
 const fs = require('fs'),
       vm = require('vm'),
       path = require('path'),
+      util = require('util'),
       Script = require('driver/Script');
 
 class ScriptManager {
@@ -28,8 +29,16 @@ class ScriptManager {
 
   getDefaultSandbox() {
     return {
+			Buffer: Buffer,
       require: require,
-      ...this.scriptDependencies
+      util: util,
+      fs: fs,
+      path: path,
+      setInterval,
+      setTimeout,
+      ...this.scriptDependencies,
+      runScript: this.runScript,
+      createModule: this.createModule
     };
   }
 
@@ -45,6 +54,10 @@ class ScriptManager {
     sandbox = {...this.getDefaultSandbox(), ...sandbox};
     
     return this.scripts[scriptName].run(sandbox);
+  }
+
+  createModule(scriptName, ...args) {
+    return new (this.getModule(scriptName))(...args.slice(0));
   }
 
   getModule(scriptName, moduleName) {

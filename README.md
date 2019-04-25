@@ -1,16 +1,22 @@
 # Node Mud Server
 
-The goal of the Node Mud Server project is to establish a barebones mud server that supports common mud protocols
-and takes care of the fundamentals of network programming within the Node.js environment.
-
-This isn't meant to be a fully playable game but instead offer a starting point for developers to design and implement
-their own game mechanics.
+This project is meant to establish a mud server using Node.JS that is fully
+extendable during runtime. Most development can be done in game by issuing
+commands and uploading/pasting scripts written in Javascript directly to the
+game server.
 
 Mud protocols the server will support:
 
 * MCCP2 (Compression of sent and received text)
 * MXP   (Out of band data e.g. menus, variables, etc)
 * MSSP  (Mud Server Status Protocol. A protocol that reports information about your server so sites like [mudstats.com](http://mudstats.com) can automatically update its directory of MUDs.
+
+
+## Design Philosphy 
+
+- Full Game Systems can be implemented at runtime
+- Game World Persistence
+- ...
 
 ### Prerequisites
 
@@ -29,6 +35,16 @@ No external depencies yet so no need to install anything.
 ```
 > npm start
 ```
+
+## Inspirations
+
+I take inspiration from codebases and games that I've have amazing experiences with through
+the years:
+
+- [Gemstone 4, Alliance of Heroes, Modus Operandi, and Dragon Realms](https://www.play.net/)
+- [The Eternal City](http://www.skotos.net/games/eternal-city/)
+- [ColdC](https://cold.org/coldc/) 
+- [LPMuds](http://lpmuds.net/)
 
 ## Authors
 
