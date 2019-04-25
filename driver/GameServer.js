@@ -12,21 +12,28 @@ class GameServer {
     this.users = new Set();
     this.server = net.createServer(this.onUserConnect.bind(this));
     this.scriptManager = new ScriptManager(logger, this.config.libDirectory);
+   
+    this.handler = null;
+ 
+    // lock during runtime reload
+    this.reloading = false;
   }
 
   /**
-   * Load the CommandHandler script through the ScriptManager so it
+   * Load the Handler script through the ScriptManager so it
    * can be dynamically reloaded during runtime
    */
   loadLib() {
-    const CommandHandler = this.scriptManager.getModule('CommandHandler');
+    this.reloading = true;
+    const Handler = this.scriptManager.getModule('Handler');
 
-    if (!CommandHandler) {
-      this.logger.error('lib/CommandHandler.js is missing or did not load successfully.');
+    if (!Handler) {
+      this.logger.error('lib/Handler.js is missing or did not load successfully.');
       process.exit(1);
     }
 
-    this.commandHandler = new CommandHandler(this);
+    this.handler = new Handler(this);
+    this.reloading = false;
   }
 
   start() {
@@ -45,13 +52,13 @@ class GameServer {
     client.on('socketError', this.onSocketError.bind(this, user));
     client.on('disconnect', this.onUserDisconnect.bind(this, user));
     
-    this.commandHandler.handleNewConnection(user);
+    this.handler.handleNewConnection(user);
     this.logger.info(`User connected ${user.getClientIp()}`);
   }
 
   onInput(user, rawInput) {
     try {
-      this.commandHandler.handleInput(user, rawInput);
+      this.handler.handleInput(user, rawInput);
     } catch (exception) {
       user.send("There was a problem with that command. It has been logged. If it continues please contact an Admin.");
       this.logger.error(exception);
