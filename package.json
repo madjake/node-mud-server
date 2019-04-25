@@ -4,7 +4,7 @@
   "description": "Node MUD Server is bare bones starting point for creating MUD game servers.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node  --max-old-space-size=128 --expose-gc server.js"
+    "start": "node  --max-old-space-size=1024 --expose-gc server.js"
   },
   "repository": {
     "type": "git",

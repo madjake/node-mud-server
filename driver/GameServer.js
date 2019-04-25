@@ -2,7 +2,8 @@ const net = require('net'),
       fs = require('fs'),
       TelnetStream = require('driver/TelnetStream'),
       User = require('driver/User'),
-      ScriptManager = require('driver/ScriptManager');
+      ScriptManager = require('driver/ScriptManager'),
+      ObjectStore = require('driver/ObjectStore');
 
 class GameServer {
   constructor(config, logger) {
@@ -12,7 +13,8 @@ class GameServer {
     this.users = new Set();
     this.server = net.createServer(this.onUserConnect.bind(this));
     this.scriptManager = new ScriptManager(logger, this.config.libDirectory);
-   
+    this.objectStore = new ObjectStore(logger);
+ 
     this.handler = null;
  
     // lock during runtime reload
@@ -25,6 +27,7 @@ class GameServer {
    */
   loadLib() {
     this.reloading = true;
+
     const Handler = this.scriptManager.getModule('Handler');
 
     if (!Handler) {
@@ -32,28 +35,35 @@ class GameServer {
       process.exit(1);
     }
 
-    this.handler = new Handler(this);
+    this.handler = new Handler(this, this.objectStore);
+    
     this.reloading = false;
   }
 
   start() {
     this.loadLib();
+
     this.server.listen(this.config.port);
     this.logger.info(`Server started on port ${this.config.port}`);
   }
 
   onUserConnect(socket) {
-    let client = new TelnetStream(socket);
-    let user = new User(client);
+    try {
+      let client = new TelnetStream(socket);
+      let user = new User(client);
 
-    this.users.add(user);
+      this.users.add(user);
 
-    client.on('input', this.onInput.bind(this, user));
-    client.on('socketError', this.onSocketError.bind(this, user));
-    client.on('disconnect', this.onUserDisconnect.bind(this, user));
-    
-    this.handler.handleNewConnection(user);
-    this.logger.info(`User connected ${user.getClientIp()}`);
+      client.on('input', this.onInput.bind(this, user));
+      client.on('socketError', this.onSocketError.bind(this, user));
+      client.on('disconnect', this.onUserDisconnect.bind(this, user));
+      
+      this.handler.handleNewConnection(user);
+      this.logger.info(`User connected ${user.getClientIp()}`);
+    } catch (exception) {
+      socket.write("There was a problem while creating a connection with the game server.");
+      this.logger.error(exception);
+    }
   }
 
   onInput(user, rawInput) {
@@ -97,6 +107,10 @@ class GameServer {
 
   forceGarbageCollection() {
     global.gc(true);
+  }
+
+  getHighResolutionProcessTime(time) {
+    return process.hrtime(time);
   }
 }
 

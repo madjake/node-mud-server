@@ -36,9 +36,7 @@ class ScriptManager {
       path: path,
       setInterval,
       setTimeout,
-      ...this.scriptDependencies,
-      runScript: this.runScript,
-      createModule: this.createModule
+      ...this.scriptDependencies
     };
   }
 
